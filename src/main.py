@@ -3,6 +3,7 @@ import logging
 import logging.handlers
 import os
 from dotenv import load_dotenv
+from github import Github, Auth
 
 load_dotenv(dotenv_path=".env")
 
@@ -27,8 +28,12 @@ intents.message_content = True
 intents.guilds = True
 intents.members = True
 
-client = discord.Client(intents=intents)
+with open(os.getenv("GITHUB_PRIVATE_KEY_LOCATION"), "r") as secret:
+    private_key = secret.read()
 
+client = discord.Client(intents=intents)
+app = Auth.AppAuth(app_id=os.getenv("GITHUB_APP_ID"), private_key=private_key).get_installation_auth(os.getenv("GITHUB_INSTALLATION_ID"))
+gh = Github(auth=app)
 
 @client.event
 async def on_ready():
@@ -44,5 +49,26 @@ async def on_message(message):
         await message.channel.send("Hello!")
 
 
-# threading.Thread(target=client.run, args=(os.getenv("DISCORD_TOKEN"),)).start()
+@client.event
+async def on_thread_create(thread):
+    logger.info(f"Thread created: {thread.name} (ID: {thread.id})")
+    # await thread.send(f"Thread created: {thread.name} (ID: {thread.id})")
+    # await thread.send(f"Thread created by: {thread.owner} (ID: {thread.owner.id})")
+    if thread.parent_id == os.getenv("DISCORD_FEATURE_REQUEST_CHANNEL_ID"):
+        await thread.send("This is a feature request thread.")
+        await thread.send("Creating a feature request issue on GitHub")
+        logger.info("Creating feature request issue on GitHub")
+        issue = gh.get_repo(os.getenv("GITHUB_REPO")).create_issue(title=f"[FEATURE] {thread.name}", body=f"Author: {thread.owner.nick}\n=================\n{thread.starter_message.content}")
+        await thread.send(f"Feature request issue created on GitHub\n[Click me!]({issue.url})")
+        logger.info(f"Feature request issue created on GitHub. URL: {issue.url}")
+    elif thread.parent_id == os.getenv("DISCORD_BUG_REPORT_CHANNEL_ID"):
+        await thread.send("This is a bug report thread.")
+        await thread.send("Creating a bug report issue on GitHub")
+        logger.info("Creating feature request issue on GitHub")
+        issue = gh.get_repo(os.getenv("GITHUB_REPO")).create_issue(title=f"[BUG] {thread.name}", body=f"Author: {thread.owner.nick}\n=================\n{thread.starter_message.content}")
+        await thread.send(f"Feature bug report created on GitHub\n[Click me!]({issue.url})")
+        logger.info(f"Feature request issue created on GitHub. URL: {issue.url}")
+    else:
+        logger.info("Thread irrelevant to feature request or bug report")
+
 client.run(os.getenv("DISCORD_TOKEN"))
