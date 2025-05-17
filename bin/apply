@@ -1,0 +1,16 @@
+import os
+from yoyo import read_migrations, get_backend
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# This script applies all migrations in the specified directory to the PostgreSQL database.
+backend = get_backend('postgresql+psycopg://{}:{}@{}/{}?port={}'.format(
+    os.getenv('PSQL_USER'),
+    os.getenv('PSQL_PASSWORD'),
+    os.getenv('PSQL_HOST'),
+    os.getenv('PSQL_DB'),
+    os.getenv('PSQL_PORT')
+))
+migrations = read_migrations('./migrations')
+backend.apply_migrations(backend.to_apply(migrations))

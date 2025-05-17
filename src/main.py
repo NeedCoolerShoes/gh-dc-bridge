@@ -45,8 +45,14 @@ async def on_message(message):
     if message.author == client.user:
         return
 
-    if message.content.startswith("$hello"):
-        await message.channel.send("Hello!")
+    if message.channel == discord.Thread:
+        return
+        # logger.info(f"Message in thread: {message.content} (ID: {message.id})")
+        # if message.content.startswith("!close"):
+        #     await message.channel.send("Closing thread...")
+        #     await message.channel.edit(archived=True)
+        #     logger.info(f"Thread closed: {message.channel.name} (ID: {message.channel.id})")
+        #     return
 
 
 @client.event
